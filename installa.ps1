@@ -146,6 +146,28 @@ function Licenza-Installata {
     return $null
 }
 
+# Segnale per apStore.net: licenza, versione, Windows e un'impronta del nome del PC (per contare i PC clonati).
+# Niente documenti, niente dati d'uso. Se la rete non c'e' o il sito non risponde, non succede niente.
+function Invia-Segnale([string]$evento) {
+    try {
+        $f = Join-Path $Dir 'licenza.txt'
+        if (-not (Test-Path $f)) { return }
+        $h = [Security.Cryptography.SHA256]::Create()
+        try { $b = $h.ComputeHash([Text.Encoding]::UTF8.GetBytes("apdocs-nome|$($env:COMPUTERNAME.ToUpper())")) } finally { $h.Dispose() }
+        $corpo = @{
+            licenza  = (Get-Content $f -Raw).Trim()
+            pc       = Codice-Questo-PC
+            nome     = (-join ($b[0..3] | ForEach-Object { $_.ToString('x2') }))
+            versione = Versione-Installata
+            windows  = [string][Environment]::OSVersion.Version
+            evento   = $evento
+        } | ConvertTo-Json -Compress
+        $url = 'https://apdocs.apstore.net/segnale'
+        if ($Sorgente -match '^https?://') { $url = $Sorgente.TrimEnd('/') + '/segnale' }
+        Invoke-WebRequest -Uri $url -Method Post -Body ([Text.Encoding]::UTF8.GetBytes($corpo)) -ContentType 'application/json' -TimeoutSec 10 -UseBasicParsing | Out-Null
+    } catch { }
+}
+
 function Messaggio-Senza-Licenza {
     $c = Codice-Questo-PC
     return "apDocs si installa con la licenza di apStore.net (15 euro a PC, una volta sola). Scrivi a supporto@apstore.net o su WhatsApp allo 0984 1805792 con questo codice PC: $c"
@@ -405,6 +427,7 @@ function Installa {
     Copia-Script
     Registra
     Pianifica-Aggiornamento
+    Invia-Segnale 'installazione'
     if ($RimuoviAltri) { Rimuovi-AltriPdf }
     Scrivi "$Nome $($man.versione) installato in $Dir."
     Apri-SceltaPredefinito
@@ -416,6 +439,7 @@ function Aggiorna-Ora {
     $f = Join-Path $Dir 'sorgente.txt'
     if (-not $SorgenteEsplicita -and (Test-Path $f)) { $script:Sorgente = (Get-Content $f -Raw).Trim() }
     $lic = Licenza-Installata
+    if ($lic) { Invia-Segnale 'controllo' }
     if (-not $lic) { Scrivi "Aggiornamenti fermi: la licenza manca o non e'' di questo PC (codice $(Codice-Questo-PC)). Scrivi a supporto@apstore.net."; return }
     $man = Leggi-Manifesto
     if ([version]$man.versione -le [version]$attuale) { Scrivi "Nessun aggiornamento: installata $attuale, disponibile $($man.versione)."; return }
