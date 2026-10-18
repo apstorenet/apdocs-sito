@@ -256,6 +256,16 @@ function Registra {
     $s.IconLocation = "$icoApp,0"
     $s.Description = "$Nome - lettore ed editor PDF (basato su PdfCraft)"
     $s.Save()
+    # Scansiona in apDocs: finestra di scansione di Windows, PDF ricercabile, apertura in apDocs
+    if (Test-Path (Join-Path $Dir 'scansiona.ps1')) {
+        $s = (New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path $StartMenu "Scansiona in $Nome.lnk"))
+        $s.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
+        $s.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$Dir\scansiona.ps1`""
+        $s.WorkingDirectory = $Dir
+        $s.IconLocation = "$icoApp,0"
+        $s.Description = "Scansiona dallo scanner e apri il PDF in $Nome"
+        $s.Save()
+    }
     Notifica-Shell
     Scrivi 'Registrato come programma per i PDF, con collegamento nel menu Start.'
 }
@@ -326,6 +336,7 @@ function Installa {
     Get-Process pdfcraft -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$AppDir*" } | Stop-Process -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Path "$Dir\brand" -Force | Out-Null
     foreach ($f in 'apdocs.ico', 'apdocs-document.ico') { Scarica-Verificato "brand/$f" (Join-Path $Dir "brand\$f") }
+    Scarica-Verificato 'scansiona.ps1' (Join-Path $Dir 'scansiona.ps1')
     Applica-Pacchetto $pac $man.versione
     Copia-Script
     Registra
@@ -363,6 +374,7 @@ function Aggiorna-Ora {
     $pac = Prepara-Pacchetto $man
     Applica-Pacchetto $pac $man.versione
     foreach ($f in 'apdocs.ico', 'apdocs-document.ico') { try { Scarica-Verificato "brand/$f" (Join-Path $Dir "brand\$f") } catch { Scrivi "Icona non aggiornata: $($_.Exception.Message)" } }
+    try { Scarica-Verificato 'scansiona.ps1' (Join-Path $Dir 'scansiona.ps1') } catch { Scrivi "Scansione non aggiornata: $($_.Exception.Message)" }
     Registra
     Scrivi "Aggiornato da $attuale a $($man.versione)."
 }
@@ -384,7 +396,7 @@ function Disinstalla-Ora {
             if (Test-Path $k) { Scrivi "Non riesco a togliere $k" }
         }
     }
-    Remove-Item (Join-Path $StartMenu "$Nome.lnk") -Force -ErrorAction SilentlyContinue
+    Remove-Item (Join-Path $StartMenu "$Nome.lnk"), (Join-Path $StartMenu "Scansiona in $Nome.lnk") -Force -ErrorAction SilentlyContinue
     Notifica-Shell
     # La cartella si toglie dopo che questo script (che sta li' dentro) e' terminato.
     $cmd = "ping -n 3 127.0.0.1 >nul & rmdir /s /q `"$Dir`""

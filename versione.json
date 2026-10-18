@@ -9,11 +9,12 @@
                               }
                   },
     "file":  {
-                 "installa.ps1":  "11c8d38b165521a059c34b89bd93da0a85bc37f1124015f92bf45821c6330407",
+                 "installa.ps1":  "946c684e453e8943b692fc094506f784ea88d82b348aa59225ef6f5a6c2459d9",
+                 "scansiona.ps1":  "7abf49b97ccde40724fbcbbfcaeecbed09f313ba503d1594f4327442c4ade975",
                  "brand/apdocs.ico":  "557cfbaef1277cf9956ef7d85d4355d0fa97ce53763e584ec18dc55b9d7c4cd5",
                  "brand/apdocs-document.ico":  "1781add68118dee0cf6aaa102f95ada64280b84a9dc2042d4f563d7bd8a13d67",
                  "brand/apdocs.svg":  "3099e392fd65994c91f75d903d650b82447dfa67cae375f1aa949314374869e4",
                  "brand/apdocs-256.png":  "65ae1296f59683c1f00305f54649b4ae94abb7e143a74f06d501a4b63cbaa4d7"
              },
-    "pubblicato":  "2026-10-18T21:17:41+02:00"
+    "pubblicato":  "2026-10-18T21:55:36+02:00"
 }
