@@ -8,6 +8,10 @@ apDocs - installazione, aggiornamento e disinstallazione su Windows.
     & ([scriptblock]::Create((irm https://apdocs.apstore.net/installa.ps1))) -Utente
     .\installa.ps1 -Aggiorna | -Disinstalla | -RimuoviAltri | -Utente | -Silenzioso
 
+  Licenza: apDocs si installa e si aggiorna solo con la licenza di questo PC, firmata da apStore.net.
+    & ([scriptblock]::Create((irm https://apdocs.apstore.net/installa.ps1))) -Licenza 'APDOCS1....'
+  Senza licenza lo script mostra il codice PC da mandarci (anche con -CodicePC) e si ferma.
+
 apDocs e' basato su PdfCraft (storytold/pdfcraft, MIT OR Apache-2.0) di ArtCraft Team e contributori.
 Lo script scarica la build ufficiale indicata in versione.json, ne verifica SHA256 e firma digitale
 e la registra come programma PDF con nome e icone apDocs. Compatibile con Windows PowerShell 5.1.
@@ -20,6 +24,8 @@ param(
     [switch]$RimuoviAltri,    # disinstalla gli altri programmi PDF (tiene firma digitale e Print to PDF)
     [switch]$Silenzioso,      # nessuna domanda, nessuna finestra
     [switch]$Attendi,
+    [string]$Licenza = '',    # licenza di questo PC (APDOCS1....), la crea strumenti/licenza.ps1
+    [switch]$CodicePC,        # mostra solo il codice di questo PC
     [switch]$DopoScript,      # interno: -Aggiorna rilanciato dallo script appena aggiornato         # a fine lavoro aspetta Invio (usato quando lo script si rilancia come amministratore)
     [string]$Sorgente = 'https://apdocs.apstore.net'   # URL o cartella locale con versione.json, brand/, installa.ps1
 )
@@ -96,6 +102,53 @@ function Verifica-Firma([byte[]]$dati, [string]$firmaB64) {
 function Sha256Byte([byte[]]$dati) {
     $h = [Security.Cryptography.SHA256]::Create()
     try { return (-join ($h.ComputeHash($dati) | ForEach-Object { $_.ToString('x2') })) } finally { $h.Dispose() }
+}
+
+# --- licenza: un testo firmato con la stessa chiave del manifesto, legato al codice del PC ---
+# Codice PC: dall'identificativo che Windows assegna a ogni installazione (MachineGuid).
+function Codice-Questo-PC {
+    $guid = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography' -Name MachineGuid).MachineGuid
+    $h = [Security.Cryptography.SHA256]::Create()
+    try { $b = $h.ComputeHash([Text.Encoding]::UTF8.GetBytes("apdocs-pc|$($guid.ToLower())")) } finally { $h.Dispose() }
+    $x = (-join ($b[0..5] | ForEach-Object { $_.ToString('X2') }))
+    return '{0}-{1}-{2}' -f $x.Substring(0, 4), $x.Substring(4, 4), $x.Substring(8, 4)
+}
+
+function Da-B64Url([string]$t) {
+    $t = $t.Replace('-', '+').Replace('_', '/')
+    switch ($t.Length % 4) { 2 { $t += '==' } 3 { $t += '=' } }
+    return [Convert]::FromBase64String($t)
+}
+
+# Restituisce i dati della licenza se e' firmata da apStore.net ed e' di questo PC, altrimenti $null.
+function Leggi-Licenza([string]$testo) {
+    if (-not $testo) { return $null }
+    $parti = $testo.Trim().Split('.')
+    if ($parti.Count -ne 3 -or $parti[0] -ne 'APDOCS1') { return $null }
+    try {
+        $json = Da-B64Url $parti[1]
+        $firma = Da-B64Url $parti[2]
+        $firmati = [byte[]]([Text.Encoding]::UTF8.GetBytes("apdocs-licenza-v1`n") + $json)
+        $rsa = New-Object Security.Cryptography.RSACryptoServiceProvider
+        $rsa.PersistKeyInCsp = $false
+        $rsa.FromXmlString($ChiavePubblica)
+        try { $ok = $rsa.VerifyData($firmati, 'SHA256', $firma) } finally { $rsa.Dispose() }
+        if (-not $ok) { return $null }
+        $dati = [Text.Encoding]::UTF8.GetString($json) | ConvertFrom-Json
+        if ($dati.pc -ne (Codice-Questo-PC)) { return $null }
+        return $dati
+    } catch { return $null }
+}
+
+function Licenza-Installata {
+    $f = Join-Path $Dir 'licenza.txt'
+    if (Test-Path $f) { return Leggi-Licenza (Get-Content $f -Raw) }
+    return $null
+}
+
+function Messaggio-Senza-Licenza {
+    $c = Codice-Questo-PC
+    return "apDocs si installa con la licenza di apStore.net (15 euro a PC, una volta sola). Scrivi a supporto@apstore.net con questo codice PC: $c"
 }
 
 $script:Manifesto = $null
@@ -331,6 +384,15 @@ function Apri-SceltaPredefinito {
 }
 
 function Installa {
+    $lic = $null
+    if ($Licenza) {
+        $lic = Leggi-Licenza $Licenza
+        if (-not $lic) { throw "Licenza non valida o di un altro PC (codice di questo PC: $(Codice-Questo-PC)). Scrivi a supporto@apstore.net." }
+    } else { $lic = Licenza-Installata }
+    if (-not $lic) {
+        $script:SenzaLicenza = $true
+        throw (Messaggio-Senza-Licenza)
+    }
     $man = Leggi-Manifesto
     $pac = Prepara-Pacchetto $man
     Get-Process pdfcraft -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$AppDir*" } | Stop-Process -Force -ErrorAction SilentlyContinue
@@ -338,6 +400,8 @@ function Installa {
     foreach ($f in 'apdocs.ico', 'apdocs-document.ico') { Scarica-Verificato "brand/$f" (Join-Path $Dir "brand\$f") }
     Scarica-Verificato 'scansiona.ps1' (Join-Path $Dir 'scansiona.ps1')
     Applica-Pacchetto $pac $man.versione
+    if ($Licenza) { Set-Content -Path (Join-Path $Dir 'licenza.txt') -Value $Licenza.Trim() -Encoding ASCII }
+    Scrivi "Licenza $($lic.id): $($lic.cliente) ($($lic.tipo)), PC $($lic.pc)."
     Copia-Script
     Registra
     Pianifica-Aggiornamento
@@ -351,6 +415,8 @@ function Aggiorna-Ora {
     if (-not $attuale) { throw "$Nome non risulta installato in $Dir." }
     $f = Join-Path $Dir 'sorgente.txt'
     if (-not $SorgenteEsplicita -and (Test-Path $f)) { $script:Sorgente = (Get-Content $f -Raw).Trim() }
+    $lic = Licenza-Installata
+    if (-not $lic) { Scrivi "Aggiornamenti fermi: manca la licenza di questo PC (codice $(Codice-Questo-PC)). Scrivi a supporto@apstore.net."; return }
     $man = Leggi-Manifesto
     if ([version]$man.versione -le [version]$attuale) { Scrivi "Nessun aggiornamento: installata $attuale, disponibile $($man.versione)."; return }
     if (Get-Process pdfcraft -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$AppDir*" }) {
@@ -404,6 +470,17 @@ function Disinstalla-Ora {
     if (-not $Silenzioso) { Write-Host "$Nome disinstallato. I PDF si apriranno con il programma scelto in Windows." }
 }
 
+if ($CodicePC) { Write-Host "Codice di questo PC: $(Codice-Questo-PC)"; return }
+
+# Senza licenza non serve chiedere i permessi: si dice subito cosa fare.
+if (-not $Aggiorna -and -not $Disinstalla -and -not $Licenza -and -not (Test-Path "$Dir\licenza.txt")) {
+    Write-Host ''
+    Write-Host (Messaggio-Senza-Licenza) -ForegroundColor Yellow
+    Write-Host ''
+    if ($Silenzioso) { exit 2 }
+    return
+}
+
 # --- amministratore: per tutti gli utenti lo script si rilancia elevato ---
 if (-not $Utente -and -not (Test-Admin)) {
     if ($Silenzioso) { throw "Per installare per tutti gli utenti servono i permessi di amministratore (oppure usa -Utente)." }
@@ -414,6 +491,7 @@ if (-not $Utente -and -not (Test-Admin)) {
         Scarica-Verificato 'installa.ps1' $file
     }
     $argomenti = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$file`"", '-Sorgente', "`"$Sorgente`"", '-Attendi')
+    if ($Licenza) { $argomenti += @('-Licenza', $Licenza.Trim()) }
     foreach ($sw in 'Aggiorna', 'Disinstalla', 'RimuoviAltri') { if ((Get-Variable $sw -ValueOnly)) { $argomenti += "-$sw" } }
     Write-Host 'Servono i permessi di amministratore: conferma nella finestra di Windows.'
     Start-Process powershell.exe -Verb RunAs -ArgumentList $argomenti -Wait
@@ -426,7 +504,8 @@ try {
     else { Installa }
 } catch {
     Scrivi "ERRORE: $($_.Exception.Message) (riga $($_.InvocationInfo.ScriptLineNumber): $($_.InvocationInfo.Line.Trim()))"
-    if (-not $Silenzioso) { Write-Host ''; Write-Host 'Qualcosa non e'' andato: scrivi a supporto@apstore.net con il file' $Registro -ForegroundColor Yellow }
+    if ($script:SenzaLicenza) { if (-not $Silenzioso) { Write-Host ''; Write-Host $_.Exception.Message -ForegroundColor Yellow } }
+    elseif (-not $Silenzioso) { Write-Host ''; Write-Host 'Qualcosa non e'' andato: scrivi a supporto@apstore.net con il file' $Registro -ForegroundColor Yellow }
     if ($Silenzioso) { exit 1 }
 }
 if ($Attendi -and -not $Silenzioso) { Read-Host 'Premi Invio per chiudere' | Out-Null }
