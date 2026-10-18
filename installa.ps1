@@ -23,10 +23,10 @@ param(
     [switch]$Disinstalla,
     [switch]$RimuoviAltri,    # disinstalla gli altri programmi PDF (tiene firma digitale e Print to PDF)
     [switch]$Silenzioso,      # nessuna domanda, nessuna finestra
-    [switch]$Attendi,
+    [switch]$Attendi,         # a fine lavoro aspetta Invio (usato quando lo script si rilancia come amministratore)
     [string]$Licenza = '',    # licenza di questo PC (APDOCS1....), la crea strumenti/licenza.ps1
     [switch]$CodicePC,        # mostra solo il codice di questo PC
-    [switch]$DopoScript,      # interno: -Aggiorna rilanciato dallo script appena aggiornato         # a fine lavoro aspetta Invio (usato quando lo script si rilancia come amministratore)
+    [switch]$DopoScript,      # interno: -Aggiorna rilanciato dallo script appena aggiornato
     [string]$Sorgente = 'https://apdocs.apstore.net'   # URL o cartella locale con versione.json, brand/, installa.ps1
 )
 
@@ -360,7 +360,7 @@ function Pianifica-Aggiornamento {
         $princ = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
         $nomeT = $NomeAttivita
     }
-    Register-ScheduledTask -TaskName $nomeT -Action $azione -Trigger $trigger -Settings $impost -Principal $princ -Description 'Controlla e installa le versioni nuove di apDocs.' -Force | Out-Null
+    Register-ScheduledTask -TaskName $nomeT -Action $azione -Trigger $trigger -Settings $impost -Principal $princ -Description 'Controlla e installa le versioni nuove di apDocs.' -Force -ErrorAction Stop | Out-Null
     Scrivi "Aggiornamento automatico pianificato: ogni giorno alle 12:30 e a ogni accesso."
 }
 
