@@ -2,10 +2,10 @@
 apDocs - installazione, aggiornamento e disinstallazione su Windows.
 
   Installa per tutti gli utenti (serve amministratore, lo chiede da solo):
-    irm https://apdocs.antoniopiccolo.com/installa.ps1 | iex
+    irm https://apdocs.apstore.net/installa.ps1 | iex
 
   Con opzioni (da file o con scriptblock):
-    & ([scriptblock]::Create((irm https://apdocs.antoniopiccolo.com/installa.ps1))) -Utente
+    & ([scriptblock]::Create((irm https://apdocs.apstore.net/installa.ps1))) -Utente
     .\installa.ps1 -Aggiorna | -Disinstalla | -RimuoviAltri | -Utente | -Silenzioso
 
 apDocs e' basato su PdfCraft (storytold/pdfcraft, MIT OR Apache-2.0) di ArtCraft Team e contributori.
@@ -21,7 +21,7 @@ param(
     [switch]$Silenzioso,      # nessuna domanda, nessuna finestra
     [switch]$Attendi,
     [switch]$DopoScript,      # interno: -Aggiorna rilanciato dallo script appena aggiornato         # a fine lavoro aspetta Invio (usato quando lo script si rilancia come amministratore)
-    [string]$Sorgente = 'https://apdocs.antoniopiccolo.com'   # URL o cartella locale con versione.json, brand/, installa.ps1
+    [string]$Sorgente = 'https://apdocs.apstore.net'   # URL o cartella locale con versione.json, brand/, installa.ps1
 )
 
 $SorgenteEsplicita = $PSBoundParameters.ContainsKey('Sorgente')
@@ -244,7 +244,7 @@ function Registra {
     Imposta $u 'Publisher' 'apStore.net di Piccolo Antonio'
     Imposta $u 'DisplayIcon' $icoApp
     Imposta $u 'InstallLocation' $Dir
-    Imposta $u 'URLInfoAbout' 'https://antoniopiccolo.com'
+    Imposta $u 'URLInfoAbout' 'https://apdocs.apstore.net'
     Imposta $u 'UninstallString' "`"$ps`" -NoProfile -ExecutionPolicy Bypass -File `"$Dir\installa.ps1`" -Disinstalla$extra"
     New-ItemProperty -Path $u -Name 'NoModify' -Value 1 -PropertyType DWord -Force | Out-Null
     New-ItemProperty -Path $u -Name 'NoRepair' -Value 1 -PropertyType DWord -Force | Out-Null
@@ -426,7 +426,7 @@ try {
     else { Installa }
 } catch {
     Scrivi "ERRORE: $($_.Exception.Message) (riga $($_.InvocationInfo.ScriptLineNumber): $($_.InvocationInfo.Line.Trim()))"
-    if (-not $Silenzioso) { Write-Host ''; Write-Host 'Qualcosa non e'' andato: scrivi a info@apstore.net con il file' $Registro -ForegroundColor Yellow }
+    if (-not $Silenzioso) { Write-Host ''; Write-Host 'Qualcosa non e'' andato: scrivi a supporto@apstore.net con il file' $Registro -ForegroundColor Yellow }
     if ($Silenzioso) { exit 1 }
 }
 if ($Attendi -and -not $Silenzioso) { Read-Host 'Premi Invio per chiudere' | Out-Null }

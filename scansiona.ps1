@@ -99,7 +99,7 @@ try {
     Move-Item $pdf $dest
     Start-Process -FilePath $app -ArgumentList "`"$dest`""
 } catch {
-    Avviso "La scansione non e' riuscita.`n`n$($_.Exception.Message)`n`nSe il problema resta, scrivi a info@apstore.net." 'Warning'
+    Avviso "La scansione non e' riuscita.`n`n$($_.Exception.Message)`n`nSe il problema resta, scrivi a supporto@apstore.net." 'Warning'
 } finally {
     Remove-Item $lavoro -Recurse -Force -ErrorAction SilentlyContinue
 }

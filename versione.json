@@ -1,20 +1,20 @@
 {
-    "versione":  "0.9.0.1",
-    "base":  "PdfCraft 0.9.0 (storytold/pdfcraft), build apDocs 1 (apstorenet/apdocs-app c26add3a)",
-    "firmatario":  "",
-    "pacchetti":  {
-                      "x64":  {
-                                  "url":  "https://github.com/apstorenet/apdocs-sito/releases/download/v0.9.0.1/apdocs-0.9.0.1-windows-x64.zip",
-                                  "sha256":  "8510d92f449172d2682ec26baf1988bf5cdce614ced55a0f42cddf3c337267e3"
-                              }
-                  },
-    "file":  {
-                 "installa.ps1":  "946c684e453e8943b692fc094506f784ea88d82b348aa59225ef6f5a6c2459d9",
-                 "scansiona.ps1":  "7abf49b97ccde40724fbcbbfcaeecbed09f313ba503d1594f4327442c4ade975",
-                 "brand/apdocs.ico":  "557cfbaef1277cf9956ef7d85d4355d0fa97ce53763e584ec18dc55b9d7c4cd5",
-                 "brand/apdocs-document.ico":  "1781add68118dee0cf6aaa102f95ada64280b84a9dc2042d4f563d7bd8a13d67",
-                 "brand/apdocs.svg":  "3099e392fd65994c91f75d903d650b82447dfa67cae375f1aa949314374869e4",
-                 "brand/apdocs-256.png":  "65ae1296f59683c1f00305f54649b4ae94abb7e143a74f06d501a4b63cbaa4d7"
-             },
-    "pubblicato":  "2026-10-18T21:55:36+02:00"
+  "versione": "0.9.0.1",
+  "base": "PdfCraft 0.9.0 (storytold/pdfcraft), build apDocs 1 (apstorenet/apdocs-app c26add3a)",
+  "firmatario": "",
+  "pacchetti": {
+    "x64": {
+      "url": "https://github.com/apstorenet/apdocs-sito/releases/download/v0.9.0.1/apdocs-0.9.0.1-windows-x64.zip",
+      "sha256": "8510d92f449172d2682ec26baf1988bf5cdce614ced55a0f42cddf3c337267e3"
+    }
+  },
+  "file": {
+    "installa.ps1": "1134d00d709358bb9a029772052016c07a6314e48d7206ef510609fc73457405",
+    "scansiona.ps1": "d14eebcc88a516b03ac7ac975d7c7b9d69eef29d7c3315dba54ee1b4ad1101d2",
+    "brand/apdocs.ico": "557cfbaef1277cf9956ef7d85d4355d0fa97ce53763e584ec18dc55b9d7c4cd5",
+    "brand/apdocs-document.ico": "1781add68118dee0cf6aaa102f95ada64280b84a9dc2042d4f563d7bd8a13d67",
+    "brand/apdocs.svg": "3099e392fd65994c91f75d903d650b82447dfa67cae375f1aa949314374869e4",
+    "brand/apdocs-256.png": "65ae1296f59683c1f00305f54649b4ae94abb7e143a74f06d501a4b63cbaa4d7"
+  },
+  "pubblicato": "2026-10-18T22:19:17+02:00"
 }
