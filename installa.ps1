@@ -148,7 +148,7 @@ function Licenza-Installata {
 
 function Messaggio-Senza-Licenza {
     $c = Codice-Questo-PC
-    return "apDocs si installa con la licenza di apStore.net (15 euro a PC, una volta sola). Scrivi a supporto@apstore.net con questo codice PC: $c"
+    return "apDocs si installa con la licenza di apStore.net (15 euro a PC, una volta sola). Scrivi a supporto@apstore.net o su WhatsApp allo 0984 1805792 con questo codice PC: $c"
 }
 
 $script:Manifesto = $null
@@ -307,7 +307,7 @@ function Registra {
     $s.TargetPath = $Exe
     $s.WorkingDirectory = $AppDir
     $s.IconLocation = "$icoApp,0"
-    $s.Description = "$Nome - lettore ed editor PDF (basato su PdfCraft)"
+    $s.Description = "$Nome - lettore ed editor PDF"
     $s.Save()
     # Scansiona in apDocs: finestra di scansione di Windows, PDF ricercabile, apertura in apDocs
     if (Test-Path (Join-Path $Dir 'scansiona.ps1')) {
@@ -387,7 +387,7 @@ function Installa {
     $lic = $null
     if ($Licenza) {
         $lic = Leggi-Licenza $Licenza
-        if (-not $lic) { throw "Licenza non valida o di un altro PC (codice di questo PC: $(Codice-Questo-PC)). Scrivi a supporto@apstore.net." }
+        if (-not $lic) { $script:SenzaLicenza = $true; throw "Licenza non valida o di un altro PC (codice di questo PC: $(Codice-Questo-PC)). Scrivi a supporto@apstore.net o su WhatsApp allo 0984 1805792." }
     } else { $lic = Licenza-Installata }
     if (-not $lic) {
         $script:SenzaLicenza = $true
@@ -416,7 +416,7 @@ function Aggiorna-Ora {
     $f = Join-Path $Dir 'sorgente.txt'
     if (-not $SorgenteEsplicita -and (Test-Path $f)) { $script:Sorgente = (Get-Content $f -Raw).Trim() }
     $lic = Licenza-Installata
-    if (-not $lic) { Scrivi "Aggiornamenti fermi: manca la licenza di questo PC (codice $(Codice-Questo-PC)). Scrivi a supporto@apstore.net."; return }
+    if (-not $lic) { Scrivi "Aggiornamenti fermi: la licenza manca o non e'' di questo PC (codice $(Codice-Questo-PC)). Scrivi a supporto@apstore.net."; return }
     $man = Leggi-Manifesto
     if ([version]$man.versione -le [version]$attuale) { Scrivi "Nessun aggiornamento: installata $attuale, disponibile $($man.versione)."; return }
     if (Get-Process pdfcraft -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$AppDir*" }) {
@@ -473,6 +473,13 @@ function Disinstalla-Ora {
 if ($CodicePC) { Write-Host "Codice di questo PC: $(Codice-Questo-PC)"; return }
 
 # Senza licenza non serve chiedere i permessi: si dice subito cosa fare.
+if (-not $Aggiorna -and -not $Disinstalla -and $Licenza -and -not (Leggi-Licenza $Licenza)) {
+    Write-Host ''
+    Write-Host "Licenza non valida o di un altro PC (codice di questo PC: $(Codice-Questo-PC)). Scrivi a supporto@apstore.net o su WhatsApp allo 0984 1805792." -ForegroundColor Yellow
+    Write-Host ''
+    if ($Silenzioso) { exit 2 }
+    return
+}
 if (-not $Aggiorna -and -not $Disinstalla -and -not $Licenza -and -not (Test-Path "$Dir\licenza.txt")) {
     Write-Host ''
     Write-Host (Messaggio-Senza-Licenza) -ForegroundColor Yellow
