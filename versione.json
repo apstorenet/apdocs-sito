@@ -1,23 +1,19 @@
 {
-    "versione":  "0.9.0",
-    "base":  "PdfCraft 0.9.0 (storytold/pdfcraft)",
-    "firmatario":  "Learning Machines Inc",
+    "versione":  "0.9.0.1",
+    "base":  "PdfCraft 0.9.0 (storytold/pdfcraft), build apDocs 1 (apstorenet/apdocs-app c26add3a)",
+    "firmatario":  "",
     "pacchetti":  {
                       "x64":  {
-                                  "url":  "https://github.com/storytold/pdfcraft/releases/download/v0.9.0/pdfcraft-0.9.0-windows-x64-portable.zip",
-                                  "sha256":  "e09f5bb89ab830e3f123a8779e28e203aef243a23997586c68a67d5b4995f429"
-                              },
-                      "arm64":  {
-                                    "url":  "https://github.com/storytold/pdfcraft/releases/download/v0.9.0/pdfcraft-0.9.0-windows-arm64-portable.zip",
-                                    "sha256":  "9931e148990166a8a36be62c20c065493bb8d89049c9a408a885e2dc2b7d88e4"
-                                }
+                                  "url":  "https://github.com/apstorenet/apdocs-sito/releases/download/v0.9.0.1/apdocs-0.9.0.1-windows-x64.zip",
+                                  "sha256":  "8510d92f449172d2682ec26baf1988bf5cdce614ced55a0f42cddf3c337267e3"
+                              }
                   },
     "file":  {
-                 "installa.ps1":  "ff8cf44bb4cd64face66e50556615894a8fa6580d99f041990098a5356d5133d",
+                 "installa.ps1":  "11c8d38b165521a059c34b89bd93da0a85bc37f1124015f92bf45821c6330407",
                  "brand/apdocs.ico":  "557cfbaef1277cf9956ef7d85d4355d0fa97ce53763e584ec18dc55b9d7c4cd5",
                  "brand/apdocs-document.ico":  "1781add68118dee0cf6aaa102f95ada64280b84a9dc2042d4f563d7bd8a13d67",
                  "brand/apdocs.svg":  "3099e392fd65994c91f75d903d650b82447dfa67cae375f1aa949314374869e4",
                  "brand/apdocs-256.png":  "65ae1296f59683c1f00305f54649b4ae94abb7e143a74f06d501a4b63cbaa4d7"
              },
-    "pubblicato":  "2026-10-18T20:10:34+02:00"
+    "pubblicato":  "2026-10-18T21:17:41+02:00"
 }

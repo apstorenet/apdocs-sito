@@ -19,7 +19,8 @@ param(
     [switch]$Disinstalla,
     [switch]$RimuoviAltri,    # disinstalla gli altri programmi PDF (tiene firma digitale e Print to PDF)
     [switch]$Silenzioso,      # nessuna domanda, nessuna finestra
-    [switch]$Attendi,         # a fine lavoro aspetta Invio (usato quando lo script si rilancia come amministratore)
+    [switch]$Attendi,
+    [switch]$DopoScript,      # interno: -Aggiorna rilanciato dallo script appena aggiornato         # a fine lavoro aspetta Invio (usato quando lo script si rilancia come amministratore)
     [string]$Sorgente = 'https://apdocs.antoniopiccolo.com'   # URL o cartella locale con versione.json, brand/, installa.ps1
 )
 
@@ -146,12 +147,16 @@ function Prepara-Pacchetto($man) {
     Expand-Archive -Path $zip -DestinationPath $estratto -Force
     $exe = Get-ChildItem $estratto -Recurse -Filter 'pdfcraft.exe' | Select-Object -First 1
     if (-not $exe) { Remove-Item $tmp -Recurse -Force; throw 'pdfcraft.exe non trovato nel pacchetto.' }
-    $firma = Get-AuthenticodeSignature $exe.FullName
-    if ($firma.Status -ne 'Valid' -or $firma.SignerCertificate.Subject -notmatch [regex]::Escape("CN=$($man.firmatario)")) {
-        Remove-Item $tmp -Recurse -Force
-        throw "Firma digitale non valida o di un altro firmatario ($($firma.Status), $($firma.SignerCertificate.Subject))."
+    # Le build ufficiali PdfCraft hanno la firma Authenticode del loro autore; le build apDocs no
+    # (il manifesto non indica un firmatario) e valgono per l'impronta SHA256 nel manifesto firmato da noi.
+    if ($man.firmatario) {
+        $firma = Get-AuthenticodeSignature $exe.FullName
+        if ($firma.Status -ne 'Valid' -or $firma.SignerCertificate.Subject -notmatch [regex]::Escape("CN=$($man.firmatario)")) {
+            Remove-Item $tmp -Recurse -Force
+            throw "Firma digitale non valida o di un altro firmatario ($($firma.Status), $($firma.SignerCertificate.Subject))."
+        }
+        Scrivi "Firma digitale verificata: $($man.firmatario)."
     }
-    Scrivi "Firma digitale verificata: $($man.firmatario)."
     $radice = $exe.Directory.FullName
     # In Programmi gli utenti non possono scrivere: impostazioni e registri vanno nel profilo di ciascuno.
     Remove-Item (Join-Path $radice 'portable.txt') -Force -ErrorAction SilentlyContinue
@@ -341,9 +346,22 @@ function Aggiorna-Ora {
         Scrivi "Disponibile $($man.versione), ma $Nome e' aperto: riprovo al prossimo giro."
         return
     }
+    # Prima lo script: una versione nuova puo' portare regole nuove, ed e' lo script nuovo
+    # (verificato con la firma del manifesto) a doverla installare.
+    $mio = Join-Path $Dir 'installa.ps1'
+    $prima = if (Test-Path $mio) { (Get-FileHash $mio -Algorithm SHA256).Hash.ToLower() } else { '' }
+    try { Scarica-Verificato 'installa.ps1' $mio } catch { Scrivi "Script non aggiornato: $($_.Exception.Message)" }
+    $dopo = if (Test-Path $mio) { (Get-FileHash $mio -Algorithm SHA256).Hash.ToLower() } else { '' }
+    if ($dopo -and $dopo -ne $prima -and -not $DopoScript) {
+        Scrivi 'Script aggiornato: continua lo script nuovo.'
+        $argomenti = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $mio, '-Aggiorna', '-DopoScript', '-Sorgente', $Sorgente)
+        if ($Silenzioso) { $argomenti += '-Silenzioso' }
+        if ($Utente) { $argomenti += '-Utente' }
+        & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" @argomenti
+        return
+    }
     $pac = Prepara-Pacchetto $man
     Applica-Pacchetto $pac $man.versione
-    try { Scarica-Verificato 'installa.ps1' (Join-Path $Dir 'installa.ps1') } catch { Scrivi "Script non aggiornato: $($_.Exception.Message)" }
     foreach ($f in 'apdocs.ico', 'apdocs-document.ico') { try { Scarica-Verificato "brand/$f" (Join-Path $Dir "brand\$f") } catch { Scrivi "Icona non aggiornata: $($_.Exception.Message)" } }
     Registra
     Scrivi "Aggiornato da $attuale a $($man.versione)."
