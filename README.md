@@ -1,4 +1,4 @@
-# apDocs - file pubblici
+﻿# apDocs - file pubblici
 
 File serviti su https://apdocs.apstore.net: installatore, icone e manifesto firmato.
 Non modificare a mano: li genera `strumenti/pubblica.ps1` del repository privato apstorenet/apdocs.
