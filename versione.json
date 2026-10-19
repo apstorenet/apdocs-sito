@@ -1,20 +1,20 @@
 {
-  "versione": "0.9.0.3",
-  "base": "PdfCraft 0.9.0 (storytold/pdfcraft), build apDocs 3 (apstorenet/apdocs-app e267d2c7)",
+  "versione": "0.9.0.4",
+  "base": "apDocs build 4 (apstorenet/apdocs-app d70c9bb7)",
   "firmatario": "",
   "pacchetti": {
     "x64": {
-      "url": "https://github.com/apstorenet/apdocs-sito/releases/download/v0.9.0.3/apdocs-0.9.0.3-windows-x64.zip",
-      "sha256": "746efb6b376f945574bb448483a38369cf41b3973ca3da594b7beb5bb93aa7e6"
+      "url": "https://github.com/apstorenet/apdocs-sito/releases/download/v0.9.0.4/apdocs-0.9.0.4-windows-x64.zip",
+      "sha256": "feca5989e2b6a7c84a615866afffb7f0aae494e721b8f7601fd83791d36f861f"
     }
   },
   "file": {
-    "installa.ps1": "9a57efaf8dc9f118277a643581bbbf2c6c4b14c091131cbcd038e104e0b2aa55",
-    "scansiona.ps1": "d14eebcc88a516b03ac7ac975d7c7b9d69eef29d7c3315dba54ee1b4ad1101d2",
+    "installa.ps1": "b89fbef43b172c4b127bdde15652360eb70d92dcef5583062671726ce4f72a9c",
+    "scansiona.ps1": "cf4de64c34d123f6501f77ed6b96bf2136b887a68d94ee6fac00e7daf8087bd8",
     "brand/apdocs.ico": "557cfbaef1277cf9956ef7d85d4355d0fa97ce53763e584ec18dc55b9d7c4cd5",
     "brand/apdocs-document.ico": "1781add68118dee0cf6aaa102f95ada64280b84a9dc2042d4f563d7bd8a13d67",
     "brand/apdocs.svg": "3099e392fd65994c91f75d903d650b82447dfa67cae375f1aa949314374869e4",
     "brand/apdocs-256.png": "65ae1296f59683c1f00305f54649b4ae94abb7e143a74f06d501a4b63cbaa4d7"
   },
-  "pubblicato": "2026-10-19T09:45:46+02:00"
+  "pubblicato": "2026-10-19T10:36:38+02:00"
 }

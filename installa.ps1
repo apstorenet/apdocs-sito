@@ -12,9 +12,8 @@ apDocs - installazione, aggiornamento e disinstallazione su Windows.
     & ([scriptblock]::Create((irm https://apdocs.apstore.net/installa.ps1))) -Licenza 'APDOCS1....'
   Senza licenza lo script mostra il codice PC da mandarci (anche con -CodicePC) e si ferma.
 
-apDocs e' basato su PdfCraft (storytold/pdfcraft, MIT OR Apache-2.0) di ArtCraft Team e contributori.
-Lo script scarica la build ufficiale indicata in versione.json, ne verifica SHA256 e firma digitale
-e la registra come programma PDF con nome e icone apDocs. Compatibile con Windows PowerShell 5.1.
+Lo script scarica la build apDocs indicata in versione.json, ne verifica SHA256 e firma
+e la registra come programma PDF. Le licenze dei componenti sono nel file NOTICE del programma. Compatibile con Windows PowerShell 5.1.
 #>
 [CmdletBinding()]
 param(
@@ -61,7 +60,9 @@ if ($Utente) {
 }
 $Classes = "$Hive\Software\Classes"
 $AppDir = Join-Path $Dir 'app'
-$Exe = Join-Path $AppDir 'pdfcraft.exe'
+$Exe = Join-Path $AppDir 'apdocs.exe'
+# Fino alla 0.9.0.3 l'eseguibile si chiamava pdfcraft.exe: i controlli guardano anche quel nome.
+$NomiProcesso = 'apdocs', 'pdfcraft'
 $Registro = Join-Path $Dir 'registro.log'
 
 function Scrivi([string]$testo) {
@@ -220,10 +221,20 @@ function Prepara-Pacchetto($man) {
     Scrivi "Checksum verificato."
     $estratto = Join-Path $tmp 'estratto'
     Expand-Archive -Path $zip -DestinationPath $estratto -Force
-    $exe = Get-ChildItem $estratto -Recurse -Filter 'pdfcraft.exe' | Select-Object -First 1
-    if (-not $exe) { Remove-Item $tmp -Recurse -Force; throw 'pdfcraft.exe non trovato nel pacchetto.' }
-    # Le build ufficiali PdfCraft hanno la firma Authenticode del loro autore; le build apDocs no
-    # (il manifesto non indica un firmatario) e valgono per l'impronta SHA256 nel manifesto firmato da noi.
+    $exe = Get-ChildItem $estratto -Recurse -Filter 'apdocs.exe' | Select-Object -First 1
+    if (-not $exe) {
+        # pacchetti fino alla 0.9.0.3: gli eseguibili si chiamano pdfcraft; si installano col nome nuovo
+        $vecchio = Get-ChildItem $estratto -Recurse -Filter 'pdfcraft.exe' | Select-Object -First 1
+        if ($vecchio) {
+            Rename-Item $vecchio.FullName 'apdocs.exe'
+            $cliVecchio = Join-Path $vecchio.Directory.FullName 'pdfcraft-cli.exe'
+            if (Test-Path $cliVecchio) { Rename-Item $cliVecchio 'apdocs-cli.exe' }
+            $exe = Get-Item (Join-Path $vecchio.Directory.FullName 'apdocs.exe')
+        }
+    }
+    if (-not $exe) { Remove-Item $tmp -Recurse -Force; throw 'apdocs.exe non trovato nel pacchetto.' }
+    # Le build apDocs non hanno firma Authenticode (il manifesto non indica un firmatario):
+    # valgono per l'impronta SHA256 nel manifesto firmato da noi.
     if ($man.firmatario) {
         $firma = Get-AuthenticodeSignature $exe.FullName
         if ($firma.Status -ne 'Valid' -or $firma.SignerCertificate.Subject -notmatch [regex]::Escape("CN=$($man.firmatario)")) {
@@ -299,10 +310,13 @@ function Registra {
     Imposta "$Classes\$ProgId\Application" 'ApplicationDescription' 'Lettore ed editor PDF'
     Imposta "$Classes\.pdf\OpenWithProgids" $ProgId ''
     # La scelta fatta dalle Impostazioni di Windows punta all'eseguibile: anche li' nome e icona apDocs.
-    Imposta "$Classes\Applications\pdfcraft.exe" 'FriendlyAppName' $Nome
-    Imposta "$Classes\Applications\pdfcraft.exe\DefaultIcon" '(default)' "`"$icoDoc`""
-    Imposta "$Classes\Applications\pdfcraft.exe\shell\open\command" '(default)' $cmd
-    Imposta "$Classes\Applications\pdfcraft.exe\SupportedTypes" '.pdf' ''
+    # pdfcraft.exe e' il nome fino alla 0.9.0.3: una scelta gia' fatta su quel nome apre il nuovo eseguibile.
+    foreach ($nomeExe in 'apdocs.exe', 'pdfcraft.exe') {
+        Imposta "$Classes\Applications\$nomeExe" 'FriendlyAppName' $Nome
+        Imposta "$Classes\Applications\$nomeExe\DefaultIcon" '(default)' "`"$icoDoc`""
+        Imposta "$Classes\Applications\$nomeExe\shell\open\command" '(default)' $cmd
+        Imposta "$Classes\Applications\$nomeExe\SupportedTypes" '.pdf' ''
+    }
     # programma registrato (compare in App predefinite)
     Imposta "$Hive\Software\$Nome\Capabilities" 'ApplicationName' $Nome
     Imposta "$Hive\Software\$Nome\Capabilities" 'ApplicationDescription' 'Lettore ed editor PDF'
@@ -417,7 +431,7 @@ function Installa {
     }
     $man = Leggi-Manifesto
     $pac = Prepara-Pacchetto $man
-    Get-Process pdfcraft -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$AppDir*" } | Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-Process $NomiProcesso -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$AppDir*" } | Stop-Process -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Path "$Dir\brand" -Force | Out-Null
     foreach ($f in 'apdocs.ico', 'apdocs-document.ico') { Scarica-Verificato "brand/$f" (Join-Path $Dir "brand\$f") }
     Scarica-Verificato 'scansiona.ps1' (Join-Path $Dir 'scansiona.ps1')
@@ -443,7 +457,7 @@ function Aggiorna-Ora {
     if (-not $lic) { Scrivi "Aggiornamenti fermi: la licenza manca o non e'' di questo PC (codice $(Codice-Questo-PC)). Scrivi a supporto@apstore.net."; return }
     $man = Leggi-Manifesto
     if ([version]$man.versione -le [version]$attuale) { Scrivi "Nessun aggiornamento: installata $attuale, disponibile $($man.versione)."; return }
-    if (Get-Process pdfcraft -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$AppDir*" }) {
+    if (Get-Process $NomiProcesso -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$AppDir*" }) {
         Scrivi "Disponibile $($man.versione), ma $Nome e' aperto: riprovo al prossimo giro."
         return
     }
@@ -470,13 +484,13 @@ function Aggiorna-Ora {
 }
 
 function Disinstalla-Ora {
-    Get-Process pdfcraft -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$AppDir*" } | Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-Process $NomiProcesso -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$AppDir*" } | Stop-Process -Force -ErrorAction SilentlyContinue
     $nomeT = $NomeAttivita
     if ($Utente) { $nomeT = "$NomeAttivita ($env:USERNAME)" }
     Unregister-ScheduledTask -TaskName $nomeT -Confirm:$false -ErrorAction SilentlyContinue
     Remove-ItemProperty "$Classes\.pdf\OpenWithProgids" -Name $ProgId -ErrorAction SilentlyContinue
     Remove-ItemProperty "$Hive\Software\RegisteredApplications" -Name $Nome -ErrorAction SilentlyContinue
-    foreach ($k in "$Classes\$ProgId", "$Classes\Applications\pdfcraft.exe", "$Hive\Software\$Nome", "$Hive\Software\Microsoft\Windows\CurrentVersion\Uninstall\$Nome") {
+    foreach ($k in "$Classes\$ProgId", "$Classes\Applications\apdocs.exe", "$Classes\Applications\pdfcraft.exe", "$Hive\Software\$Nome", "$Hive\Software\Microsoft\Windows\CurrentVersion\Uninstall\$Nome") {
         if (-not (Test-Path $k)) { continue }
         try { Remove-Item $k -Recurse -Force -ErrorAction Stop }
         catch {

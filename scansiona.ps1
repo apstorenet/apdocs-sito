@@ -21,8 +21,10 @@ $WIA_PAPER_EMPTY = -2145320957        # 0x80210003: il caricatore e' vuoto
 $WIA_DOCUMENT_HANDLING_SELECT = 3088  # 1 = caricatore, 2 = piano
 $WIA_HORIZONTAL_RESOLUTION = 6147
 
-$cli = Join-Path $PSScriptRoot 'app\pdfcraft-cli.exe'
-$app = Join-Path $PSScriptRoot 'app\pdfcraft.exe'
+$cli = Join-Path $PSScriptRoot 'app\apdocs-cli.exe'
+$app = Join-Path $PSScriptRoot 'app\apdocs.exe'
+# fino alla 0.9.0.3 gli eseguibili si chiamavano pdfcraft
+if (-not (Test-Path $cli)) { $cli = Join-Path $PSScriptRoot 'app\pdfcraft-cli.exe'; $app = Join-Path $PSScriptRoot 'app\pdfcraft.exe' }
 $memoria = Join-Path $env:APPDATA 'apDocs\scanner.txt'
 
 function Avviso([string]$testo, [string]$icona = 'Information') {
