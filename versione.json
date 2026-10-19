@@ -1,11 +1,11 @@
 {
-  "versione": "0.9.0.4",
-  "base": "apDocs build 4 (apstorenet/apdocs-app d70c9bb7)",
+  "versione": "0.9.0.5",
+  "base": "apDocs build 5 (apstorenet/apdocs-app 6056c0cf)",
   "firmatario": "",
   "pacchetti": {
     "x64": {
-      "url": "https://github.com/apstorenet/apdocs-sito/releases/download/v0.9.0.4/apdocs-0.9.0.4-windows-x64.zip",
-      "sha256": "feca5989e2b6a7c84a615866afffb7f0aae494e721b8f7601fd83791d36f861f"
+      "url": "https://github.com/apstorenet/apdocs-sito/releases/download/v0.9.0.5/apdocs-0.9.0.5-windows-x64.zip",
+      "sha256": "b406654942b05dbf736680c247f0fcb6f6cbf87ba0795330d936edc1778d757b"
     }
   },
   "file": {
@@ -16,5 +16,5 @@
     "brand/apdocs.svg": "3099e392fd65994c91f75d903d650b82447dfa67cae375f1aa949314374869e4",
     "brand/apdocs-256.png": "65ae1296f59683c1f00305f54649b4ae94abb7e143a74f06d501a4b63cbaa4d7"
   },
-  "pubblicato": "2026-10-19T10:36:38+02:00"
+  "pubblicato": "2026-10-19T14:21:52+02:00"
 }
