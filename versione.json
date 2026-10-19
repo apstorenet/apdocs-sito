@@ -1,11 +1,11 @@
 {
-  "versione": "0.9.0.2",
-  "base": "PdfCraft 0.9.0 (storytold/pdfcraft), build apDocs 2 (apstorenet/apdocs-app 9c6a009f)",
+  "versione": "0.9.0.3",
+  "base": "PdfCraft 0.9.0 (storytold/pdfcraft), build apDocs 3 (apstorenet/apdocs-app e267d2c7)",
   "firmatario": "",
   "pacchetti": {
     "x64": {
-      "url": "https://github.com/apstorenet/apdocs-sito/releases/download/v0.9.0.2/apdocs-0.9.0.2-windows-x64.zip",
-      "sha256": "b68d97a94364511f28e938741049b7762012e7d670f801dc5c60e6af7c2d539c"
+      "url": "https://github.com/apstorenet/apdocs-sito/releases/download/v0.9.0.3/apdocs-0.9.0.3-windows-x64.zip",
+      "sha256": "746efb6b376f945574bb448483a38369cf41b3973ca3da594b7beb5bb93aa7e6"
     }
   },
   "file": {
@@ -16,5 +16,5 @@
     "brand/apdocs.svg": "3099e392fd65994c91f75d903d650b82447dfa67cae375f1aa949314374869e4",
     "brand/apdocs-256.png": "65ae1296f59683c1f00305f54649b4ae94abb7e143a74f06d501a4b63cbaa4d7"
   },
-  "pubblicato": "2026-10-19T00:00:15+02:00"
+  "pubblicato": "2026-10-19T09:45:46+02:00"
 }
