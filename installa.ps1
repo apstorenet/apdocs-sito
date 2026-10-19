@@ -141,6 +141,22 @@ function Leggi-Licenza([string]$testo) {
     } catch { return $null }
 }
 
+# Licenze bloccate da apStore.net: elenco "bloccate" (id) nel manifesto firmato. Il programma legge
+# licenza-bloccata.txt accanto a licenza.txt e, se c'e', non apre documenti finche' non torna sbloccata.
+function Licenza-Bloccata($man, $lic) {
+    return [bool]($lic -and $man.bloccate -and (@($man.bloccate) -contains $lic.id))
+}
+function Segna-Blocco([bool]$bloccata, $lic) {
+    $segno = Join-Path $Dir 'licenza-bloccata.txt'
+    if ($bloccata) {
+        if (-not (Test-Path $segno)) { Scrivi "Licenza $($lic.id) bloccata da apStore.net." }
+        Set-Content -Path $segno -Value "Licenza $($lic.id) bloccata da apStore.net. Per riattivarla: supporto@apstore.net" -Encoding UTF8
+    } elseif (Test-Path $segno) {
+        Remove-Item $segno -Force
+        Scrivi "Licenza $($lic.id) di nuovo attiva."
+    }
+}
+
 function Licenza-Installata {
     $f = Join-Path $Dir 'licenza.txt'
     if (Test-Path $f) { return Leggi-Licenza (Get-Content $f -Raw) }
@@ -430,6 +446,10 @@ function Installa {
         throw (Messaggio-Senza-Licenza)
     }
     $man = Leggi-Manifesto
+    if (Licenza-Bloccata $man $lic) {
+        $script:SenzaLicenza = $true
+        throw "Questa licenza ($($lic.id)) e' bloccata. Scrivi a supporto@apstore.net o su WhatsApp allo 0984 1805792."
+    }
     $pac = Prepara-Pacchetto $man
     Get-Process $NomiProcesso -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$AppDir*" } | Stop-Process -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Path "$Dir\brand" -Force | Out-Null
@@ -456,6 +476,9 @@ function Aggiorna-Ora {
     if ($lic) { Invia-Segnale 'controllo' }
     if (-not $lic) { Scrivi "Aggiornamenti fermi: la licenza manca o non e'' di questo PC (codice $(Codice-Questo-PC)). Scrivi a supporto@apstore.net."; return }
     $man = Leggi-Manifesto
+    $bloccata = Licenza-Bloccata $man $lic
+    Segna-Blocco $bloccata $lic
+    if ($bloccata) { Scrivi 'Aggiornamenti fermi: licenza bloccata.'; return }
     if ([version]$man.versione -le [version]$attuale) { Scrivi "Nessun aggiornamento: installata $attuale, disponibile $($man.versione)."; return }
     if (Get-Process $NomiProcesso -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$AppDir*" }) {
         Scrivi "Disponibile $($man.versione), ma $Nome e' aperto: riprovo al prossimo giro."
