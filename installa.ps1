@@ -2,14 +2,14 @@
 apDocs - installazione, aggiornamento e disinstallazione su Windows.
 
   Installa per tutti gli utenti (serve amministratore, lo chiede da solo):
-    irm https://apdocs.apstore.net/installa.ps1 | iex
+    irm https://apdocs.it/installa.ps1 | iex
 
   Con opzioni (da file o con scriptblock):
-    & ([scriptblock]::Create((irm https://apdocs.apstore.net/installa.ps1))) -Utente
+    & ([scriptblock]::Create((irm https://apdocs.it/installa.ps1))) -Utente
     .\installa.ps1 -Aggiorna | -Disinstalla | -RimuoviAltri | -Utente | -Silenzioso
 
   Licenza: apDocs si installa e si aggiorna solo con la licenza di questo PC, firmata da apStore.net.
-    & ([scriptblock]::Create((irm https://apdocs.apstore.net/installa.ps1))) -Licenza 'APDOCS1....'
+    & ([scriptblock]::Create((irm https://apdocs.it/installa.ps1))) -Licenza 'APDOCS1....'
   Senza licenza lo script mostra il codice PC da mandarci (anche con -CodicePC) e si ferma.
 
 Lo script scarica la build apDocs indicata in versione.json, ne verifica SHA256 e firma
@@ -26,7 +26,10 @@ param(
     [string]$Licenza = '',    # licenza di questo PC (APDOCS1....), la crea strumenti/licenza.ps1
     [switch]$CodicePC,        # mostra solo il codice di questo PC
     [switch]$DopoScript,      # interno: -Aggiorna rilanciato dallo script appena aggiornato
-    [string]$Sorgente = 'https://apdocs.apstore.net'   # URL o cartella locale con versione.json, brand/, installa.ps1
+    [string]$Pacchetto = '',  # cartella con app\, brand\ e scansiona.ps1 gia' pronti (Installa apDocs.exe): niente download
+    [string]$VersionePacchetto = '',  # la versione del pacchetto in -Pacchetto
+    [switch]$VerificaLicenza, # controlla solo -Licenza: uscita 0 valida, 2 non valida o di un altro PC, 3 bloccata, 4 scaduta
+    [string]$Sorgente = 'https://apdocs.it'   # URL o cartella locale con versione.json, brand/, installa.ps1
 )
 
 $SorgenteEsplicita = $PSBoundParameters.ContainsKey('Sorgente')
@@ -79,6 +82,11 @@ function Scrivi([string]$testo) {
 # script e delle icone, quindi nulla di cio' che arriva dal sito viene usato senza quella firma.
 $ChiavePubblica = '<RSAKeyValue><Modulus>0U0rR+uPYM1FVb6ZbuZ2Y7V81pXBhrPVd5Tj5fasrdp8iqbGTMgNl+cQ8bbvoNPiQ8+u6EELVqI7sZhkN7/7BGlGYGPmqzpDTWpJPhTCqpAKGbK5cvJPNbL5AIhLf444UGHScq5ve+YRFccSZq39FR6sou8A97cZzsYJMKlL51i8eyEmIYGyq+RYpCTR00SKHWBsdfyXueQaJOOjWMVp+drUbz2UXqYVyKbr9TWye3csFQAr2hb78l2LmrdFG1zLrj5NS87IPDU5mV0hXOxiPxLR22104iWgWzv/49JHZcBSm5qDk8jJyzfo0EO2J2Wj7S8JOTUX8X7RvTm2s+XH43UG0urT9MVPfwLbMk4l8l8368UCuQsCPuW32YzHBpLQc/VIHoNzNtYN9xTJAYpCvHv5Nyhor4OWnhvpjyzruEAtLJSH5hdlkIAKszfVHiB0QToBTtP+nmjdi6W7ukPkyCns8cg/WkWsEIdGK9CrW8YhSDtutj7NspU8xFQS2/QZ</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>'
 
+# Seconda chiave, SOLO per le licenze vendute online (la firma il Worker dopo il pagamento Stripe, o per la prova gratuita):
+# vale per le licenze "annuale" e "prova" e mai per versione.json, quindi chi la rubasse dal Worker non potrebbe mandare
+# un programma falso.
+$ChiaveLicenzeOnline = '<RSAKeyValue><Modulus>0fxw6tGpHZAHLquIkylKFTdPiRhxDBUowHOQqckLEi2sxXi496H+eSfTD7UPjNEUPH+e+9Ji++0SQaMfbJsl/Tx16XaApeTNH+CO5Nw89LE1xtbv7MYIIQdTCXWUdFrCU1tY0Hl2nz2qNXuN8tj1yYRHcHODP9ngJ2/dLKEYrxMJlUbOTDu8CB2joTRwgK+vGiwv3yH+bICYT88JgyX05GJ81HbpwTlTPC6lhObg+4zN+hjvtRjIzXPvmvxduriN+5FcgoyQhxLiGHB8qOpmQrPivTrA2vMZgqn7O0orvdOzXDwQJ1GUAkavCKXmhS54jLyknjhjCObdhOfxr1lFef1hnrouylUT/+SQGOwzX8jNkxVwGWVIEz4XhXmG2SPD+HGtZMMjDOwa7EJDVY2N6rug/C31digKeCzelkvyEzLHu5GLXL8YE9tE6uGZ2i075AxAKTEi72cEM7T8BPoGbU4Ur54JkLExsWn6TFkpinHHoGK5ANIU2qqzKuIi8ncJ</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>'
+
 function Leggi-Byte([string]$percorso) {
     $src = $Sorgente.TrimEnd('/', '\')
     if ($src -match '^https?://') {
@@ -130,12 +138,17 @@ function Leggi-Licenza([string]$testo) {
         $json = Da-B64Url $parti[1]
         $firma = Da-B64Url $parti[2]
         $firmati = [byte[]]([Text.Encoding]::UTF8.GetBytes("apdocs-licenza-v1`n") + $json)
-        $rsa = New-Object Security.Cryptography.RSACryptoServiceProvider
-        $rsa.PersistKeyInCsp = $false
-        $rsa.FromXmlString($ChiavePubblica)
-        try { $ok = $rsa.VerifyData($firmati, 'SHA256', $firma) } finally { $rsa.Dispose() }
-        if (-not $ok) { return $null }
+        $chiave = $null
+        foreach ($k in $ChiavePubblica, $ChiaveLicenzeOnline) {
+            $rsa = New-Object Security.Cryptography.RSACryptoServiceProvider
+            $rsa.PersistKeyInCsp = $false
+            $rsa.FromXmlString($k)
+            try { if ($rsa.VerifyData($firmati, 'SHA256', $firma)) { $chiave = $k } } finally { $rsa.Dispose() }
+            if ($chiave) { break }
+        }
+        if (-not $chiave) { return $null }
         $dati = [Text.Encoding]::UTF8.GetString($json) | ConvertFrom-Json
+        if ($chiave -eq $ChiaveLicenzeOnline -and $dati.tipo -notin 'annuale', 'prova') { return $null }
         if ($dati.pc -ne (Codice-Questo-PC)) { return $null }
         return $dati
     } catch { return $null }
@@ -146,11 +159,12 @@ function Leggi-Licenza([string]$testo) {
 function Licenza-Bloccata($man, $lic) {
     return [bool]($lic -and $man.bloccate -and (@($man.bloccate) -contains $lic.id))
 }
-function Segna-Blocco([bool]$bloccata, $lic) {
+function Segna-Blocco([bool]$bloccata, $lic, [string]$motivo = '') {
     $segno = Join-Path $Dir 'licenza-bloccata.txt'
     if ($bloccata) {
-        if (-not (Test-Path $segno)) { Scrivi "Licenza $($lic.id) bloccata da apStore.net." }
-        Set-Content -Path $segno -Value "Licenza $($lic.id) bloccata da apStore.net. Per riattivarla: supporto@apstore.net" -Encoding UTF8
+        if (-not $motivo) { $motivo = "Licenza $($lic.id) bloccata da apStore.net. Per riattivarla: supporto@apstore.net" }
+        if (-not (Test-Path $segno)) { Scrivi $motivo }
+        Set-Content -Path $segno -Value $motivo -Encoding UTF8
     } elseif (Test-Path $segno) {
         Remove-Item $segno -Force
         Scrivi "Licenza $($lic.id) di nuovo attiva."
@@ -161,6 +175,37 @@ function Licenza-Installata {
     $f = Join-Path $Dir 'licenza.txt'
     if (Test-Path $f) { return Leggi-Licenza (Get-Content $f -Raw) }
     return $null
+}
+
+# Licenze "annuale" e "prova": "scade" e' l'ultimo giorno buono. Le altre (pagata, omaggio, contratto) non scadono.
+# Scaduta = come bloccata: licenza-bloccata.txt, e il programma non apre documenti finche' non si rinnova.
+function Data-Licenza([string]$d) { return [datetime]::ParseExact($d, 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture) }
+function Data-It([string]$d) { if ($d -match '^(\d{4})-(\d\d)-(\d\d)$') { return "$($Matches[3])/$($Matches[2])/$($Matches[1])" } return $d }
+function Licenza-Scaduta($lic) {
+    if (-not $lic -or -not $lic.scade) { return $false }
+    return (Get-Date).Date -gt (Data-Licenza $lic.scade)
+}
+function Motivo-Scadenza($lic) {
+    $cosa = if ($lic.tipo -eq 'prova') { 'La prova gratuita di apDocs e'' finita' } else { 'La licenza di apDocs e'' scaduta' }
+    return "$cosa il $(Data-It $lic.scade). Per continuare: 15 euro l'anno su https://apdocs.it/compra?pc=$(Codice-Questo-PC) - aiuto: supporto@apstore.net, WhatsApp 0984 1805792"
+}
+# Da un mese prima della scadenza (e dopo) chiede al sito se per questo PC c'e' una licenza che arriva piu' in la'
+# (un rinnovo pagato): se si', la mette al posto di quella installata. Senza rete non succede niente.
+function Cerca-Rinnovo($lic) {
+    if (-not $lic -or -not $lic.scade) { return $lic }
+    if ((Get-Date).Date.AddDays(31) -lt (Data-Licenza $lic.scade)) { return $lic }
+    try {
+        $base = 'https://apdocs.it'
+        if ($Sorgente -match '^https?://') { $base = $Sorgente.TrimEnd('/') }
+        $r = Invoke-WebRequest -Uri "$base/rinnovo?pc=$(Codice-Questo-PC)&id=$($lic.id)" -TimeoutSec 15 -UseBasicParsing
+        if ($r.StatusCode -ne 200) { return $lic }
+        $testo = ([string]$r.Content).Trim()
+        $nuova = Leggi-Licenza $testo
+        if (-not $nuova -or ($nuova.scade -and $nuova.scade -le $lic.scade)) { return $lic }
+        Set-Content -Path (Join-Path $Dir 'licenza.txt') -Value $testo -Encoding ASCII
+        Scrivi "Licenza rinnovata: $($nuova.id), valida fino al $(Data-It $nuova.scade)."
+        return $nuova
+    } catch { return $lic }
 }
 
 # Segnale per apStore.net: licenza, versione, Windows e un'impronta del nome del PC (per contare i PC clonati).
@@ -179,7 +224,7 @@ function Invia-Segnale([string]$evento) {
             windows  = [string][Environment]::OSVersion.Version
             evento   = $evento
         } | ConvertTo-Json -Compress
-        $url = 'https://apdocs.apstore.net/segnale'
+        $url = 'https://apdocs.it/segnale'
         if ($Sorgente -match '^https?://') { $url = $Sorgente.TrimEnd('/') + '/segnale' }
         Invoke-WebRequest -Uri $url -Method Post -Body ([Text.Encoding]::UTF8.GetBytes($corpo)) -ContentType 'application/json' -TimeoutSec 10 -UseBasicParsing | Out-Null
     } catch { }
@@ -187,7 +232,7 @@ function Invia-Segnale([string]$evento) {
 
 function Messaggio-Senza-Licenza {
     $c = Codice-Questo-PC
-    return "apDocs si installa con la licenza di apStore.net (15 euro a PC, una volta sola). Scrivi a supporto@apstore.net o su WhatsApp allo 0984 1805792 con questo codice PC: $c"
+    return "apDocs si installa con la licenza di apStore.net: prova gratis 30 giorni con l'installatore (https://apdocs.it/scarica), poi 15 euro l'anno a PC. Codice di questo PC: $c. Aiuto: supporto@apstore.net, WhatsApp 0984 1805792"
 }
 
 $script:Manifesto = $null
@@ -273,7 +318,7 @@ function Applica-Pacchetto($pacchetto, [string]$versione) {
     if (Test-Path $AppDir) { Rename-Item $AppDir $vecchia }
     Rename-Item $nuova $AppDir
     Remove-Item $vecchia -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item $pacchetto.Tmp -Recurse -Force -ErrorAction SilentlyContinue
+    if ($pacchetto.Tmp) { Remove-Item $pacchetto.Tmp -Recurse -Force -ErrorAction SilentlyContinue }
     Set-Content -Path (Join-Path $Dir 'versione.txt') -Value $versione -Encoding ASCII
 }
 
@@ -349,7 +394,7 @@ function Registra {
     Imposta $u 'Publisher' 'apStore.net di Piccolo Antonio'
     Imposta $u 'DisplayIcon' $icoApp
     Imposta $u 'InstallLocation' $Dir
-    Imposta $u 'URLInfoAbout' 'https://apdocs.apstore.net'
+    Imposta $u 'URLInfoAbout' 'https://apdocs.it'
     Imposta $u 'UninstallString' "`"$ps`" -NoProfile -ExecutionPolicy Bypass -File `"$Dir\installa.ps1`" -Disinstalla$extra"
     New-ItemProperty -Path $u -Name 'NoModify' -Value 1 -PropertyType DWord -Force | Out-Null
     New-ItemProperty -Path $u -Name 'NoRepair' -Value 1 -PropertyType DWord -Force | Out-Null
@@ -381,7 +426,9 @@ function Pianifica-Aggiornamento {
     if ($Utente) { $extra = ' -Utente' }
     $arg = "-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$Dir\installa.ps1`" -Aggiorna -Silenzioso$extra"
     $azione = New-ScheduledTaskAction -Execute $ps -Argument $arg
-    $trigger = @((New-ScheduledTaskTrigger -Daily -At '12:30'), (New-ScheduledTaskTrigger -AtLogOn))
+    # Senza amministratore l'accesso da guardare e' solo quello di questo utente.
+    $accesso = if ($Utente) { New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME" } else { New-ScheduledTaskTrigger -AtLogOn }
+    $trigger = @((New-ScheduledTaskTrigger -Daily -At '12:30'), $accesso)
     $impost = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
     if ($Utente) {
         $princ = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
@@ -445,25 +492,50 @@ function Installa {
         $script:SenzaLicenza = $true
         throw (Messaggio-Senza-Licenza)
     }
-    $man = Leggi-Manifesto
-    if (Licenza-Bloccata $man $lic) {
+    if ($Pacchetto) {
+        # Installa apDocs.exe: il programma e' gia' nel pacchetto. Il sito serve solo a sapere se la licenza e' bloccata.
+        $man = $null
+        try { $man = Leggi-Manifesto } catch { Scrivi "Sito non raggiungibile ($($_.Exception.Message)): installo il pacchetto incluso." }
+        $versione = $VersionePacchetto
+    } else {
+        $man = Leggi-Manifesto
+        $versione = $man.versione
+    }
+    if ($man -and (Licenza-Bloccata $man $lic)) {
         $script:SenzaLicenza = $true
         throw "Questa licenza ($($lic.id)) e' bloccata. Scrivi a supporto@apstore.net o su WhatsApp allo 0984 1805792."
     }
-    $pac = Prepara-Pacchetto $man
+    if (Licenza-Scaduta $lic) {
+        $script:SenzaLicenza = $true
+        throw (Motivo-Scadenza $lic)
+    }
+    if ($Pacchetto) {
+        $radice = Join-Path $Pacchetto 'app'
+        if (-not (Test-Path (Join-Path $radice 'apdocs.exe'))) { throw "apdocs.exe non trovato in $radice." }
+        Remove-Item (Join-Path $radice 'portable.txt') -Force -ErrorAction SilentlyContinue
+        $pac = @{ Tmp = $null; Radice = $radice }
+    } else { $pac = Prepara-Pacchetto $man }
     Get-Process $NomiProcesso -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$AppDir*" } | Stop-Process -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Path "$Dir\brand" -Force | Out-Null
-    foreach ($f in 'apdocs.ico', 'apdocs-document.ico') { Scarica-Verificato "brand/$f" (Join-Path $Dir "brand\$f") }
-    Scarica-Verificato 'scansiona.ps1' (Join-Path $Dir 'scansiona.ps1')
-    Applica-Pacchetto $pac $man.versione
+    if ($Pacchetto) {
+        foreach ($f in 'apdocs.ico', 'apdocs-document.ico') { Copy-Item (Join-Path $Pacchetto "brand\$f") (Join-Path $Dir "brand\$f") -Force }
+        Copy-Item (Join-Path $Pacchetto 'scansiona.ps1') (Join-Path $Dir 'scansiona.ps1') -Force
+    } else {
+        foreach ($f in 'apdocs.ico', 'apdocs-document.ico') { Scarica-Verificato "brand/$f" (Join-Path $Dir "brand\$f") }
+        Scarica-Verificato 'scansiona.ps1' (Join-Path $Dir 'scansiona.ps1')
+    }
+    Applica-Pacchetto $pac $versione
     if ($Licenza) { Set-Content -Path (Join-Path $Dir 'licenza.txt') -Value $Licenza.Trim() -Encoding ASCII }
-    Scrivi "Licenza $($lic.id): $($lic.cliente) ($($lic.tipo)), PC $($lic.pc)."
+    # una licenza nuova (rinnovo) toglie il segno di scadenza; quello di blocco solo se il sito ha appena detto che non e' bloccata
+    $segno = Join-Path $Dir 'licenza-bloccata.txt'
+    if ((Test-Path $segno) -and ($man -or ((Get-Content $segno -Raw) -match 'scaduta|finita'))) { Segna-Blocco $false $lic }
+    Scrivi "Licenza $($lic.id): $($lic.cliente) ($($lic.tipo)$(if ($lic.scade) { ", fino al $(Data-It $lic.scade)" })), PC $($lic.pc)."
     Copia-Script
     Registra
     Pianifica-Aggiornamento
     Invia-Segnale 'installazione'
     if ($RimuoviAltri) { Rimuovi-AltriPdf }
-    Scrivi "$Nome $($man.versione) installato in $Dir."
+    Scrivi "$Nome $versione installato in $Dir."
     Apri-SceltaPredefinito
 }
 
@@ -473,8 +545,10 @@ function Aggiorna-Ora {
     $f = Join-Path $Dir 'sorgente.txt'
     if (-not $SorgenteEsplicita -and (Test-Path $f)) { $script:Sorgente = (Get-Content $f -Raw).Trim() }
     $lic = Licenza-Installata
+    $lic = Cerca-Rinnovo $lic
     if ($lic) { Invia-Segnale 'controllo' }
     if (-not $lic) { Scrivi "Aggiornamenti fermi: la licenza manca o non e'' di questo PC (codice $(Codice-Questo-PC)). Scrivi a supporto@apstore.net."; return }
+    if (Licenza-Scaduta $lic) { Segna-Blocco $true $lic (Motivo-Scadenza $lic); Scrivi 'Aggiornamenti fermi: licenza scaduta.'; return }
     $man = Leggi-Manifesto
     $bloccata = Licenza-Bloccata $man $lic
     Segna-Blocco $bloccata $lic
@@ -532,6 +606,15 @@ function Disinstalla-Ora {
 }
 
 if ($CodicePC) { Write-Host "Codice di questo PC: $(Codice-Questo-PC)"; return }
+
+# Per Installa apDocs.exe: la licenza incollata va bene per questo PC? (niente installazione)
+if ($VerificaLicenza) {
+    $lic = Leggi-Licenza $Licenza
+    if (-not $lic) { exit 2 }
+    if (Licenza-Scaduta $lic) { exit 4 }
+    try { if (Licenza-Bloccata (Leggi-Manifesto) $lic) { exit 3 } } catch { }
+    exit 0
+}
 
 # Senza licenza non serve chiedere i permessi: si dice subito cosa fare.
 if (-not $Aggiorna -and -not $Disinstalla -and $Licenza -and -not (Leggi-Licenza $Licenza)) {

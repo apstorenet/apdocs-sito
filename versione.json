@@ -1,20 +1,20 @@
 {
-  "versione": "0.9.0.6",
-  "base": "apDocs build 6 (apstorenet/apdocs-app 7a9875a4)",
+  "versione": "0.9.0.7",
+  "base": "apDocs build 7 (apstorenet/apdocs-app d7b53f9b)",
   "firmatario": "",
   "pacchetti": {
     "x64": {
-      "url": "https://github.com/apstorenet/apdocs-sito/releases/download/v0.9.0.6/apdocs-0.9.0.6-windows-x64.zip",
-      "sha256": "569cc78358a54a701f10ba58e5f36e475721c8973a9caeb812258db69e743858"
+      "url": "https://github.com/apstorenet/apdocs-sito/releases/download/v0.9.0.7/apdocs-0.9.0.7-windows-x64.zip",
+      "sha256": "3fab777217fa67b76e9ddd344e1ef6458a1cdd047b336cf2bf30b1d207a29230"
     }
   },
   "file": {
-    "installa.ps1": "2a94d14c8078e5606303e93d85c5f3ff07e91c7d84f603c5113ddbabca0a6c44",
+    "installa.ps1": "252f45debfa7a852173cb51f1a2d97dd25c769a741609de47a4cb8e5c7ccfac7",
     "scansiona.ps1": "cf4de64c34d123f6501f77ed6b96bf2136b887a68d94ee6fac00e7daf8087bd8",
     "brand/apdocs.ico": "557cfbaef1277cf9956ef7d85d4355d0fa97ce53763e584ec18dc55b9d7c4cd5",
     "brand/apdocs-document.ico": "1781add68118dee0cf6aaa102f95ada64280b84a9dc2042d4f563d7bd8a13d67",
     "brand/apdocs.svg": "3099e392fd65994c91f75d903d650b82447dfa67cae375f1aa949314374869e4",
     "brand/apdocs-256.png": "65ae1296f59683c1f00305f54649b4ae94abb7e143a74f06d501a4b63cbaa4d7"
   },
-  "pubblicato": "2026-10-19T15:24:32+02:00"
+  "pubblicato": "2026-10-23T08:32:09+02:00"
 }
